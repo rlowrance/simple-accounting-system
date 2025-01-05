@@ -2,33 +2,27 @@ import collections
 import datetime
 import unittest
 
-import account
-import amount
+from account import Account
+from account import make as account_make
+from amount import Amount
+from amount import make as amount_make
 
 from accountingsystemerror import AccountingSystemError
 
-JournalEntry = collections.namedtuple('JournalEntry', 'date amount debitAccount creditAccount description')
+JournalEntry = collections.namedtuple('JournalEntry', 'date amount debit_account credit_account description source source_location')
 
-def make(date = None, amount = None, debitAccount = None, creditAccount = None, description = "") -> JournalEntry:
-    if date is None:
-        raise AccountingSystemError(f'missing argument date')
-    if not isinstance(date, datetime.date):
-        raise AccountingSystemError(f'date {date} is not a datetime.date')
-    if amount is None:
-        raise AccountingSystemError(f'missing argument amount')
-    if not isinstance(amount, amount.Amount):
-        raise AccountingSystemError(f'amount {amount} is not an Amount')
-    if debitAccount is None:
-        raise AccountingSystemError(f'missing argument debitAccount')
-    if not isinstance(debitAccount, account.Account):
-        raise AccountingSystemError(f'debitAccount {debitAccount} is not an Account')
-    if creditAccount is None:
-        raise AccountingSystemError(f'missing argument creditAccount')
-    if not isinstance(creditAccount, account.Acount):
-        raise AccountingSystemError(f'creditAccount {creditAccount} is not an Account')
-    if not isinstance(description, str):
-        raise AccountingSystemError(f'description {description} is not a str')
-    return JournalEntry(date, amount, debitAccount, creditAccount, description)
+def make(date = None, amount = None, debit_account = None, credit_account = None, description = "", source=None, source_location=None) -> JournalEntry:
+    def is_type(name, value, type):
+        if not isinstance(value, type):
+            raise AccountingSystemError(f'argument {name} with value {value} is not an instance of {type}')
+    is_type('date', date, datetime.date)
+    is_type('amount', amount, Amount)
+    is_type('debitAccount', debit_account, Account)
+    is_type('creditAccount', credit_account, Account)
+    is_type('description', description, str)
+    is_type('source', source, str)
+    is_type('source_location', source_location, str)
+    return JournalEntry(date, amount, debit_account, credit_account, description, source, source_location)
 
 
 class Test(unittest.TestCase):
@@ -36,10 +30,19 @@ class Test(unittest.TestCase):
         tests = (None, 'my description')
         for test in tests:
             the_date = datetime.date(1,1,1)
-            the_amount = amount.Amount(100, 23)
-            the_debit_account = account.make('Asset', 'cash')
-            the_credit_account = account.make('Liability', 'loan')
-            x = make(the_date, the_amount, the_debit_account, the_credit_account, test)
+            the_amount = Amount(100, 23)
+            the_debit_account = account_make('Asset', 'cash')
+            the_credit_account = account_make('Liability', 'loan')
+            x = make(
+                date=the_date,
+                amount=the_amount,
+                debit_account=the_debit_account,
+                credit_account=the_credit_account,
+                description="what happened",
+                source="source.txt",
+                source_location="line 0"
+            )
             self.assertTrue(isinstance(x, JournalEntry))
 
-    
+if __name__ == '__main__':
+    unittest.main()
