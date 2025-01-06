@@ -4,7 +4,7 @@ import unittest
 from accountingsystemerror import AccountingSystemError
 import amount as _amount
 
-Entry = collections.namedtuple('Entry', 'side amount')
+EntryOLD = collections.namedtuple('Entry', 'side amount')
 
 allowed_sides = {"debit", "credit"}
 
