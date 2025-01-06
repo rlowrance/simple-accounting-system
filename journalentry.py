@@ -2,10 +2,9 @@ import collections
 import datetime
 import unittest
 
-from account import Account
-from account import make as account_make
-from amount import Amount
-from amount import make as amount_make
+#from account import Account
+#from account import make as account_make
+import amount as amount_
 
 from accountingsystemerror import AccountingSystemError
 
@@ -16,9 +15,9 @@ def make(date = None, amount = None, debit_account = None, credit_account = None
         if not isinstance(value, type):
             raise AccountingSystemError(f'argument {name} with value {value} is not an instance of {type}')
     is_type('date', date, datetime.date)
-    is_type('amount', amount, Amount)
-    is_type('debitAccount', debit_account, Account)
-    is_type('creditAccount', credit_account, Account)
+    is_type('amount', amount, amount_.Amount)
+    is_type('debitAccount', debit_account, str)
+    is_type('creditAccount', credit_account, str)
     is_type('description', description, str)
     is_type('source', source, str)
     is_type('source_location', source_location, str)
@@ -29,15 +28,11 @@ class Test(unittest.TestCase):
     def test_make_ok(self):
         tests = (None, 'my description')
         for test in tests:
-            the_date = datetime.date(1,1,1)
-            the_amount = Amount(100, 23)
-            the_debit_account = account_make('Asset', 'cash')
-            the_credit_account = account_make('Liability', 'loan')
             x = make(
-                date=the_date,
-                amount=the_amount,
-                debit_account=the_debit_account,
-                credit_account=the_credit_account,
+                date=datetime.date(1,1,1),
+                amount=amount_.make(dollars=100, cents=23),
+                debit_account='Cash',
+                credit_account='Loan',
                 description="what happened",
                 source="source.txt",
                 source_location="line 0"
