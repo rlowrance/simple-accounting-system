@@ -1,10 +1,7 @@
-import collections
 from dataclasses import dataclass
 import datetime
 import unittest
 
-#from account import Account
-#from account import make as account_make
 from amount import Amount
 
 @dataclass

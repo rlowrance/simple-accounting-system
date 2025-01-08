@@ -1,9 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import List, NamedTuple
 import unittest
-
-from accountingsystemerror import AccountingSystemError
 
 @dataclass(frozen=True)
 class ReportColumn:
@@ -14,23 +11,32 @@ class ReportColumn:
         assert len(self.items) > 0
         assert self.alignment in {'left', 'right'}
 
+    def render(self, column_spacing=1) -> tuple[str]:
+        width = max(map(lambda x: len(f'{x}'), self.items))
+        r = []
+        for item in self.items:
+            s = f'{item}'
+            aligned_item = s.ljust(width) if self.alignment == 'left' else s.rjust(width)
+            r.append(aligned_item)
+        return tuple(r)
 
-ReportColumn1 = NamedTuple('ReportColumn', [('items', list), ('alignment', str)])
-# the items are typically a string, the header, followed by the values (of any type) in the column
-# ex: ['account category', 'asset', 'asset', 'liability']
-# ex: ['amount', 10, 30, 1.23]
-
-def make(items: list, alignment: str) -> ReportColumn:
-    assert isinstance(items, Sequence)
-    assert len(items) > 0  # require at least the header
-    assert alignment in {"left", "right"}
-    return ReportColumn(items=items, alignment=alignment)
 
 class Test(unittest.TestCase):
-    def test(self):
+    def test_init(self):
         # x = make(items=['header', 10, 30], alignment="right")
         x = ReportColumn(items=['header, 10, 30'], alignment='right')
         self.assertTrue(isinstance(x, ReportColumn))
+
+    def test_render(self):
+        items = ('header', 10, 20.2, 'abc')
+        tests = (
+            ReportColumn(alignment='left', items=items),
+            ReportColumn(alignment='right', items=items),
+        )
+        for test in tests:
+            lines = test.render()
+            self.assertEqual(4, len(lines))
+            self.assertEqual(6, len(lines[0]))
 
 if __name__ == '__main__':
     unittest.main()
