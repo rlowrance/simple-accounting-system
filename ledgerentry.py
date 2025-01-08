@@ -1,47 +1,37 @@
 import collections
+import dataclasses
+from dataclasses import dataclass
 import datetime
 import unittest
 
 from accountingsystemerror import AccountingSystemError
-import amount as amount_
+from amount import Amount
 
-LedgerEntry = collections.namedtuple('LedgerEntry', 'date side amount description source source_location')
+@dataclass
+class LedgerEntry:
+    date: datetime.date
+    side: str
+    amount: Amount
+    description: str
+    source: str
+    source_location: str
 
-allowed_sides = {"debit", "credit"}
+    def __post_init__(self):
+        assert isinstance(self.date, datetime.date)
+        assert isinstance(self.side, str)
+        assert isinstance(self.amount, Amount)
+        assert isinstance(self.description, str)
+        assert isinstance(self.source, str)
+        assert isinstance(self.source_location, str)
 
-def make(date=None, side=None, amount=None, description=None, source=None, source_location=None) -> LedgerEntry:
-    def is_type(name, value, type):
-        if not isinstance(value, type):
-            raise AccountingSystemError(f'argument {name} with value {value} is not an instance of type {type}')
-    is_type('date', date, datetime.date)
-    is_type('side', side, str)
-    is_type('amount', amount, amount_.Amount)
-    is_type('description', description, str)
-    is_type('source', source, str)
-    is_type('source_location', source_location, str)
-    if side not in allowed_sides:
-        raise AccountingSystemError(f'argument side with value {side} not in {allowed_sides}')
-    return LedgerEntry(date, side, amount, description, source, source_location)
-
-def add(lhs, rhs) -> LedgerEntry:
-    assert isinstance(lhs, LedgerEntry)
-    assert isinstance(rhs, LedgerEntry)
-    def _make(side, amount):
-        return make(
-            date=max(lhs.date, rhs.date),
-            side=side,
-            amount=amount,
-            description="add(LedgerEntry, LedgerEntry)",
-            source="program",
-            source_location="file ledgerentry.py"
-        )
-    if lhs.side == rhs.side:
-        return _make(lhs.side, amount_.add(lhs.amount, rhs.amount))
-    if amount_.greater(lhs.amount, rhs.amount):
-        return _make(lhs.side, amount_.subtract(lhs.amount, rhs.amount))
-    if amount_.greater(rhs.amount, lhs.amount):
-        return _make(rhs.side, amount_.subtract(rhs.amount, lhs.amount))
-
+    def add(self, other: 'LedgerEntry') -> 'LedgerEntry':
+        assert isinstance(other, LedgerEntry)
+        def make(side, amount: Amount) -> 'LedgerEntry':
+            return dataclasses.replace(self, side=side, amount=amount)
+        if self.side == other.side: return make(self.side, self.amount.add(other.amount))
+        if self.amount.greater(other.amount): return make(self.side, self.amount.subtract(other.amount))
+        if other.amount.greater(self.amount): return make(other.side, other.amount.subtract(self.amount))
+        return make(self.side, Amount(dollars=0, cents=0))
 
 class Test(unittest.TestCase):
     def test_add(self):
@@ -57,7 +47,7 @@ class Test(unittest.TestCase):
             a, b, c = test
             def _make(x): return LedgerEntry(date=datetime.date.today(),
                                              side=x[0],
-                                             amount=amount_.make(dollars=x[1], cents=x[2]),
+                                             amount=Amount(dollars=x[1], cents=x[2]),
                                              description="description",
                                              source="source",
                                              source_location="line 0"
@@ -65,21 +55,10 @@ class Test(unittest.TestCase):
             x = _make(a)
             y = _make(b)
             expected = _make(c)
-            actual = add(x, y)
+            actual = x.add(y)
             self.assertEqual(expected.side, actual.side)
             self.assertEqual(expected.amount, actual.amount)
 
-
-
-
-    def test_make(self):
-        x = make(date=datetime.date(1,1,1), 
-                 side="debit",
-                 amount=amount_.make(dollars=100, cents=10),
-                 description="something",
-                 source="source",
-                 source_location="location")
-        self.assertTrue(True)  # just test run to completion
 
 if __name__ == '__main__':
     unittest.main()

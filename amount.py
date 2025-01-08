@@ -1,42 +1,35 @@
-import collections
+from dataclasses import dataclass
 import unittest
 
-Amount = collections.namedtuple('Amount', 'dollars cents')
+from accountingsystemerror import AccountingSystemError
 
-def make(dollars = None, cents = None) -> Amount:
-    if dollars is None:
-        return make(0, cents)
-    if cents is None:
-        return make(dollars, 0)
-    assert cents >= 0
-    return Amount(dollars, cents)
+@dataclass
+class Amount:
+    dollars: int = 0
+    cents: int = 0
 
-def add(lhs, rhs) -> Amount:
-    assert isinstance(lhs, Amount)
-    assert isinstance(rhs, Amount)
-    return _normalize(Amount(lhs.dollars + rhs.dollars, lhs.cents + rhs.cents))
+    def __post_init__(self):
+        assert isinstance(self.dollars, int)
+        assert isinstance(self.cents, int)
+        if self.cents < 0: self._normalize()
 
-def subtract(lhs, rhs) -> Amount:
-    assert isinstance(lhs, Amount)
-    assert isinstance(rhs, Amount)
-    return _normalize(Amount(lhs.dollars - rhs.dollars, lhs.cents - rhs.cents))
-
-def greater(lhs, rhs) -> bool:
-    assert isinstance(lhs, Amount)
-    assert isinstance(rhs, Amount)
-    if lhs.dollars > rhs.dollars:
-        return True
-    if lhs.dollars == rhs.dollars and lhs.cents > rhs.cents:
-        return True
-    return False
-
-def _normalize(lhs) -> Amount:
-    assert isinstance(lhs, Amount)
-    if lhs.cents > 99:
-        return _normalize(Amount(lhs.dollars + 1, lhs.cents - 100))
-    if lhs.cents < 0:
-        return _normalize(Amount(lhs.dollars - 1, lhs.cents + 100))
-    return lhs
+    def add(self, other: 'Amount') -> 'Amount':
+        assert isinstance(other, Amount)
+        return Amount(dollars=self.dollars+other.dollars, cents=self.cents+other.cents)._normalize()
+    
+    def subtract(self, other: 'Amount') -> 'Amount':
+        assert isinstance(other, Amount)
+        return Amount(dollars=self.dollars-other.dollars, cents=self.cents-other.cents)._normalize()
+    
+    def greater(self, other: 'Amount') -> bool:
+        if self.dollars > other.dollars: return True
+        if self.dollars == other.dollars and self.cents > other.cents: return True
+        return False
+    
+    def _normalize(self) -> 'Amount':
+        if self.cents > 99: return Amount(dollars=self.dollars+1, cents=self.cents-100)._normalize()
+        if self.cents < 0: return Amount(dollars=self.dollars-1, cents=self.cents+100)._normalize()
+        return self
 
 class Test(unittest.TestCase):
     def test_normalize(self):
@@ -51,7 +44,7 @@ class Test(unittest.TestCase):
             a, b = test
             x = Amount(a[0], a[1])
             expected = Amount(b[0], b[1])
-            r = _normalize(x)
+            r = x._normalize()
             self.assertEqual(expected, r)
 
     def test_subtract(self):
@@ -72,17 +65,18 @@ class Test(unittest.TestCase):
             def _make(x): return Amount(x[0], x[1])
             x = _make(a)
             y = _make(b)
-            self.assertEqual(expected, greater(x, y))
+            r = x.greater(y)
+            self.assertEqual(expected, x.greater(y))
 
-    def test_make(self):
+    def test_Amount(self):
         tests = (
-            (None, 50, 0, 50),
-            (100, None, 100, 0),
+            (0, 50, 0, 50),
+            (100, 0, 100, 0),
             (100, 50, 100, 50),
         )
         for test in tests:
             d, c, expected_d, expected_c = test
-            amount = make(dollars = d, cents=c)
+            amount = Amount(dollars = d, cents=c)
             self.assertEqual(amount.dollars, expected_d)
             self.assertEqual(amount.cents, expected_c)
 
@@ -98,7 +92,7 @@ class Test(unittest.TestCase):
             x = _make(a)
             y = _make(b)
             expected = _make(c)
-            self.assertEqual(expected, add(x, y))
+            self.assertEqual(expected, x.add(y))
 
 if __name__ == "__main__":
     unittest.main()
