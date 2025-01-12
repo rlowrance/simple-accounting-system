@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 import unittest
 
 from accountingsystemerror import AccountingSystemError
@@ -12,6 +13,10 @@ class Amount:
         assert isinstance(self.dollars, int)
         assert isinstance(self.cents, int)
         if self.cents < 0: self._normalize()
+
+    @staticmethod
+    def zero() -> 'Amount':
+        return Amount(dollars=0, cents=0)
 
     def add(self, other: 'Amount') -> 'Amount':
         assert isinstance(other, Amount)
