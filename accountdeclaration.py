@@ -16,6 +16,10 @@ class AccountDeclaration:
         assert isinstance(self.name, str)
         assert self.category in _allowed_account_categories
 
+    @classmethod
+    def allowed_account_categories(cls):
+        return _allowed_account_categories
+
 
 class Test(unittest.TestCase):
     def test_AccountDeclaration(self):
