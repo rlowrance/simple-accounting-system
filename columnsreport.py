@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 import dataclasses
-from typing import Self
+from typing import List, Self
 import unittest
 
 from accountingsystemerror import AccountingSystemError
@@ -34,7 +34,7 @@ class ColumnsReport:
 
 
     # Return tuple of strings that are the report lines
-    def render(self, column_spacing=1) -> tuple[str]:
+    def render(self, column_spacing=1) -> List[str]:
         assert len(self.columns) > 0
         rendered_columns = tuple(map(lambda x: x.render(), self.columns))
         r = []  # each item will be a line
@@ -45,8 +45,7 @@ class ColumnsReport:
                 line.append(rendered_column[row_index])
             rendered_line = ''.join(line)
             r.append(rendered_line)
-        renderer_report = tuple('\n'.join(r))
-        return renderer_report
+        return r
     
 
 class Test(unittest.TestCase):
