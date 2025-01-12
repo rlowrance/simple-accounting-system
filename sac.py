@@ -20,22 +20,9 @@ from journalentry import JournalEntry
 from line import Line
 from reportcolumn import ReportColumn
 
-# ref: https://stackoverflow.com/questions/3305926/python-csv-string-to-array
-def csv_line_to_str(line: str) -> List[str]:
-    return list(map(str.strip, next(csv.reader([line]))))
 
-# ref: https://stackoverflow.com/questions/3305926/python-csv-string-to-array
-def csv_line_from_row(row: List[str]) -> str:
-    with io.StringIO() as line:
-        csv.writer(line).writerow(row)
-        return line.getvalue().strip()
 
-# ref: https://stackoverflow.com/questions/6330071/safe-casting-in-python
-def safe_cast(value, to_type, default_value=None):
-    try:
-        return to_type(value)
-    except (ValueError, TypeError):
-        return default_value
+
 
 
 
