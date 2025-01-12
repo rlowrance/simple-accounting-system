@@ -1,10 +1,10 @@
 # Double-entry accounting with debits and credits
-import collections
+import collections.abc
 from dataclasses import dataclass
 import dataclasses
 import copy
 import datetime
-from typing import Self, Union
+from typing import List, Self, Union
 import unittest
 
 from pprint import pprint
@@ -21,30 +21,32 @@ class AccountingSystem:
     category_for: dict
     ledgers: dict
     balances: dict
-    last_journal_entry: Union[JournalEntry, None]
 
     def __post_init__(self):
         assert isinstance(self.category_for, dict)
         assert isinstance(self.ledgers, dict)
         assert isinstance(self.balances, dict)
-        assert self.last_journal_entry is None or isinstance(self.last_journal_entry, JournalEntry)
 
     @classmethod
-    def empty(cls) -> Self:
-        return AccountingSystem(category_for={}, ledgers={}, balances={}, last_journal_entry=None)
+    def empty(cls) -> 'AccountingSystem':
+        return AccountingSystem(category_for={}, ledgers={}, balances={})
 
-    def render(self) -> tuple[str]:
+    def render(self) -> List[str]:
         r = []
         r.append('AccountingSystem')
         def show(name, value):
             r.append(f'  {name}')
             for k, v in value.items():
-                r.append(f'    {k}: {v}')
+                if isinstance(v, collections.abc.Sequence):
+                    r.append(f'    {k}')
+                    for v1 in v:
+                        r.append(f'      {v}')
+                else:
+                    r.append(f'    {k}: {v}')
         show('category_for', self.category_for)
         show('ledgers', self.ledgers)
         show('balances', self.balances)
-        r.append(f'  last_journal_entry: {self.last_journal_entry}')
-        return tuple(r)
+        return r
 
     def join(self, other) -> Self:
         if isinstance(other, AccountDeclaration): return self._join_account_declaration(other)
@@ -62,6 +64,10 @@ class AccountingSystem:
             return self
 
     def _join_journal_entry(self, je: JournalEntry) -> Self:
+        if je.debit_account not in self.category_for:
+            raise ValueError(f'account {je.debit_account} not previously defined')
+        if je.credit_account not in self.category_for:
+            raise ValueError(f'account {je.credit_account} not previously defined')
         debit_ledger_entry = LedgerEntry(
                 date=je.date,
                 side='debit',
@@ -94,8 +100,7 @@ class AccountingSystem:
         return dataclasses.replace(
             self,
             ledgers=make_new_ledgers(),
-            balances=make_new_balances(),
-            last_journal_entry=je
+            balances=make_new_balances()
         )
 
 class Test(unittest.TestCase):
