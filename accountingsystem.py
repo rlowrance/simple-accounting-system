@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import dataclasses
 import copy
 import datetime
-from typing import List, Self, Union
+from typing import Dict, List, Self, Union
 import unittest
 
 from pprint import pprint
@@ -18,9 +18,9 @@ from line import Line
 
 @dataclass(frozen=True)
 class AccountingSystem:
-    category_for: dict
-    ledgers: dict
-    balances: dict
+    category_for: Dict[str, str]
+    ledgers: Dict[str, List[LedgerEntry]]
+    balances: Dict[str, LedgerEntry]
 
     def __post_init__(self):
         assert isinstance(self.category_for, dict)
@@ -129,11 +129,11 @@ class Test(unittest.TestCase):
         )
         for test in tests:
             journal_entry, expected_cash_balance = test
-            print(journal_entry)
             x = x.join(journal_entry)
             self.assertEqual(expected_cash_balance, x.balances['cash'].amount.dollars)
-        for line in x.render():
-            print(line)
+        if False:
+            for line in x.render():
+                print(line)
 
 if __name__ == '__main__':
     unittest.main()
