@@ -14,6 +14,11 @@ class Amount:
         assert isinstance(self.cents, int)
         if self.cents < 0: self._normalize()
 
+    def __str__(self):
+        cents_str = f'{self.cents}'.rjust(2, '0')
+        return f'{self.dollars}.{cents_str}'
+
+
     @staticmethod
     def zero() -> 'Amount':
         return Amount(dollars=0, cents=0)
@@ -37,6 +42,16 @@ class Amount:
         return self
 
 class Test(unittest.TestCase):
+    def test_str(self):
+        tests = (
+            (Amount(dollars=0, cents=1), '0.01'),
+            (Amount(dollars=1, cents=2), '1.02'),
+            (Amount(dollars=123, cents=45), '123.45'),
+        )
+        for test in tests:
+            x, expected = test
+            self.assertEqual(expected, f'{x}')
+            
     def test_normalize(self):
         tests = (
             ((100, 10), (100, 10)),
