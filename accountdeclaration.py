@@ -4,7 +4,7 @@ import unittest
 
 from accountingsystemerror import AccountingSystemError
  
-_allowed_account_categories = {"Asset", "Liability", "Equity", "Revenue", "Expense"}
+allowed_account_categories = {"Asset", "Liability", "Equity", "Revenue", "Expense"}
 
 @dataclass(frozen=True)
 class AccountDeclaration:
@@ -14,11 +14,11 @@ class AccountDeclaration:
     def __post_init__(self):
         assert isinstance(self.category, str)
         assert isinstance(self.name, str)
-        assert self.category in _allowed_account_categories
+        assert self.category in allowed_account_categories
 
     @classmethod
     def allowed_account_categories(cls):
-        return _allowed_account_categories
+        return allowed_account_categories
 
 
 class Test(unittest.TestCase):
