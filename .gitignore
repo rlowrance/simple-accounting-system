@@ -3,3 +3,5 @@ __pycache__/
 __pycache__/account.cpython-312.pyc
 __pycache__/accountingsystemerror.cpython-312.pyc
 __pycache__/amount.cpython-312.pyc
+_*.csv
+*.pdf
