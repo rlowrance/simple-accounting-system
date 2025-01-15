@@ -129,7 +129,7 @@ def process_file(directory: str, filename: str, accounting_system: AccountingSys
 # process files in a directory
 def process_files(directory='.') -> None:
     r = AccountingSystem.empty()
-    for objname in os.listdir(directory):
+    for objname in sorted(os.listdir(directory)):
         if objname.startswith('.') or objname.startswith('_') or objname.endswith('.py'):
             print(f'skipping {objname}')
             continue
@@ -143,7 +143,7 @@ def process_files(directory='.') -> None:
     write_summary_accounts(os.path.join(directory, f'_summary-accounts.csv'), r)
     write_summary_balances(os.path.join(directory, f'_summary-balances.csv'), r)
     for category, name in yield_categories_nanes(r):
-        write_summary_ledger(os.path.join(directory, f'_summary-ledger-{category}-{name}'), r.ledgers[name])
+        write_summary_ledger(os.path.join(directory, f'_summary-ledger-{category}-{name}.csv'), r.ledgers[name])
     return
 
 def main():
