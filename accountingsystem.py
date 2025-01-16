@@ -12,6 +12,7 @@ from pprint import pprint
 from accountdeclaration import AccountDeclaration
 from amount import Amount
 from accountingsystemerror import AccountingSystemError
+from balance import Balance
 from journalentry import JournalEntry
 from ledgerentry import LedgerEntry
 from line import Line
@@ -19,8 +20,8 @@ from line import Line
 @dataclass(frozen=True)
 class AccountingSystem:
     category_for: Dict[str, str]
-    ledgers: Dict[str, List[LedgerEntry]]
-    balances: Dict[str, LedgerEntry]
+    ledgers: Dict[str, List[LedgerEntry]]  # account_name : [LedgerEntry]
+    balances: Dict[str, Balance]           # account_name: Balance
 
     def __post_init__(self):
         assert isinstance(self.category_for, dict)
@@ -70,16 +71,14 @@ class AccountingSystem:
             raise ValueError(f'account {je.credit_account} not previously defined')
         debit_ledger_entry = LedgerEntry(
                 date=je.date,
-                side='debit',
-                amount=je.amount,
+                balance=Balance(side='debit', amount=je.amount),
                 description=je.description,
                 source=je.source,
                 source_location=je.source_location
             )
         credit_ledger_entry = LedgerEntry(
                 date=je.date,
-                side='credit',
-                amount=je.amount,
+                balance=Balance(side='credit', amount=je.amount),
                 description=je.description,
                 source=je.source,
                 source_location=je.source_location)
@@ -94,8 +93,14 @@ class AccountingSystem:
             return new_ledgers
         def make_new_balances():  # the dict values are a single ledger entry
             new_balances = copy.deepcopy(self.balances)
-            new_balances[je.debit_account] = self.balances[je.debit_account].add(debit_ledger_entry) if je.debit_account in new_balances else debit_ledger_entry
-            new_balances[je.credit_account] = self.balances[je.credit_account].add(credit_ledger_entry) if je.credit_account in new_balances else credit_ledger_entry
+            if je.debit_account in new_balances:
+                new_balances[je.debit_account] = new_balances[je.debit_account].add(Balance(side='debit', amount=je.amount))
+            else:
+                new_balances[je.debit_account] = Balance(side='debit', amount=je.amount)
+            if je.credit_account in new_balances:
+                new_balances[je.credit_account] = new_balances[je.credit_account].add(Balance(side='credit', amount=je.amount))
+            else:
+                new_balances[je.credit_account] = new_balances
             return new_balances
         return dataclasses.replace(
             self,
