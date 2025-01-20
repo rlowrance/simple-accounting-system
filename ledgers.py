@@ -12,7 +12,7 @@ import sys
 from sac_types import AccountDeclaration, Amount, JournalEntry, LedgerEntry, make
 import utility as u
 
-State = collections.namedtuple('State', 'category_for_account ledgers previous_journal_entry line source location')
+State = collections.namedtuple('State', 'category_for_account ledger_entries_for_account previous_journal_entry line source location')
 
 class InputError(Exception):
     def __init__(self, msg): self.msg = msg
@@ -98,11 +98,11 @@ def join_state_journal_entry(state: State, items: List[str]) -> State:
     previous_date = None if state.previous_journal_entry is None else state.previous_journal_entry.date
     je = make('JournalEntry', fill_date(date, previous_date), cast('Amount', amount), debit_account, credit_account, description)
     assert isinstance(je, JournalEntry)
-    new_ledgers = copy.deepcopy(state.ledgers)
+    new_ledgers = copy.deepcopy(state.ledger_entries_for_account)
     def ledger_entry(side, account): return make('LedgerEntry', account, je.date, make('Balance', side, je.amount), je.description, state.source, state.location)
     new_ledgers[je.debit_account].append(ledger_entry('debit', debit_account))
     new_ledgers[je.credit_account].append(ledger_entry('credit', credit_account))
-    return state._replace(ledgers=new_ledgers, previous_journal_entry=je)
+    return state._replace(ledger_entries_for_account=new_ledgers, previous_journal_entry=je)
 
 def join_state_journal_entry_abbreviated(state: State, items: List[str]) -> State:
     assert isinstance(state, State)
@@ -121,7 +121,7 @@ def produce_output(state: State) -> None:
     for category in ('Asset', 'Liability', 'Equity', 'Revenue', 'Expense'):
         accounts = accounts_for_category[category]
         for account in sorted(accounts, key=lambda account: account.split()):
-            for ledger_entry in sorted(state.ledgers[account], key=lambda ledger_entry: ledger_entry.date):
+            for ledger_entry in sorted(state.ledger_entries_for_account[account], key=lambda ledger_entry: ledger_entry.date):
                 assert isinstance(ledger_entry, LedgerEntry)
                 writer.writerow((
                     state.category_for_account[ledger_entry.account],
