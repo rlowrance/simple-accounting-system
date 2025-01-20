@@ -126,7 +126,7 @@ def produce_output(state: State) -> None:
                 writer.writerow((
                     state.category_for_account[ledger_entry.account],
                     ledger_entry.account,
-                    ledger_entry.date.isoformat(),
+                    f'{str(ledger_entry.date.year)}{str(ledger_entry.date.month).zfill(2)}{str(ledger_entry.date.day).zfill(2)}',
                     ledger_entry.balance.side,
                     cast('str', ledger_entry.balance.amount),
                     ledger_entry.description,
