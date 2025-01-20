@@ -1,3 +1,4 @@
+# OBSOLETE--USE INDIVIDUAL FILES
 # Chart of account
 Asset citibank 9851      # checking
 Asset venmo              # roy.lowrance@gmail.com
@@ -18,12 +19,6 @@ Expense art shows
 Expense h                          # household
 Expense misc-expense
 
-# Citibank Checking ... 9851
-
-Asset: citibank 9850
-Revenue: ads revenue blumberg-capital
-
-20250114, 12000, citibank 9581, ads revenue, for 2024 Oct-Dec
 
 # Citibank Mastercard ... 9462
 # Protocol: enter business expenses as they occur; at end of month, enter all transactions from the monthly statement
@@ -48,10 +43,6 @@ Revenue: ads revenue blumberg-capital
 
 # LL Bean Mastercard ... 9195
 # Serviced by Citibank
-
-Asset: citibank_9581
-Liability: llbean_9195
-Expense: h  # household
 
 20241206,190.06,h,llbean_9195,luggage
 
