@@ -1,6 +1,7 @@
 # utility functions
 import csv
 import io
+import sys
 import unittest
 
 from typing import Any, Dict, List, Set
@@ -15,6 +16,11 @@ def csv_line_from_row(row: List[str]) -> str:
 # ref: https://stackoverflow.com/questions/3305926/python-csv-string-to-array
 def csv_line_to_str(line: str) -> List[str]:
     return list(map(str.strip, next(csv.reader([line]))))
+
+# Write to stderr
+# ref: https://stackoverflow.com/questions/5574702/how-do-i-print-to-stderr-in-python
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 # ref: https://stackoverflow.com/questions/483666/reverse-invert-a-dictionary-mapping
 def invert_dict(d: Dict[Any, Any]) -> Dict[Any, Set]:
