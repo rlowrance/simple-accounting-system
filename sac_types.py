@@ -1,11 +1,20 @@
 import collections
+import copy
 import datetime
+
+import utility as u
 
 AccountDeclaration = collections.namedtuple('AccountDeclaration', 'category name')
 Amount = collections.namedtuple('Amount', 'dollars cents')
 Balance = collections.namedtuple('Balance', 'side amount')
 JournalEntry = collections.namedtuple('JournalEntry', 'date amount debit_account credit_account description')
 LedgerEntry = collections.namedtuple('LedgerEntry', 'account date balance description source location')
+
+
+class InputError(Exception):
+    def __init__(self, msg): self.msg = msg
+    def __str__(self): return f'{self.msg}'
+
 
 # Return type-checked value x
 def checked(x, kind):
@@ -50,3 +59,37 @@ def make(kind, *args):
         )
 
     raise NotImplementedError(f'make({kind}, {args})')
+
+
+# Return val cast according to kind
+# For Q's definition, see https://code.kx.com/q/ref/cast/
+def cast(kind, val):
+    if kind == 'Amount' and isinstance(val, str):
+        dollars, _, cents = val.partition('.')
+        return make(
+            'Amount',
+            0 if dollars == '' else int(dollars),
+            0 if cents == '' else int(cents)
+        )
+    if kind == 'AccountDeclaration' and isinstance(val, str):
+        error_msg = 'Account Declaration was not like: Asset Accounts Receivable'
+        splits = u.split_and_strip(val)
+        if len(splits) < 2: raise InputError(error_msg)
+        try:
+            return make('AccountDeclaration', splits[0], ' '.join(splits[1:]))
+        except AssertionError:
+            raise InputError(error_msg)
+    if kind == 'str' and isinstance(val, Amount): return f'{val.dollars}.{str(val.cents).zfill(2)}'
+    raise NotImplementedError(f'{kind}: {val}')
+
+# Return x combined with y
+# For Q's definition, see https://code.kx.com/q/ref/join/
+def join(x, y):
+    raise NotImplementedError(f'join({type(x)}, {type(y)})')
+
+
+
+
+
+
+

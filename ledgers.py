@@ -9,36 +9,18 @@ import fileinput
 import os
 import sys
 
-from sac_types import AccountDeclaration, Amount, JournalEntry, LedgerEntry, make
+from sac_types import AccountDeclaration, Amount, JournalEntry, InputError, LedgerEntry
+import sac_types
 import utility as u
 
 State = collections.namedtuple('State', 'category_for_account ledger_entries_for_account previous_journal_entry line source location')
 
-class InputError(Exception):
-    def __init__(self, msg): self.msg = msg
-    def __str__(self): return f'{self.msg}'
-
-# Return val cast according to kind
-# For Q's definition, see https://code.kx.com/q/ref/cast/
-def cast(kind, val):
-    if kind == 'Amount' and isinstance(val, str):
-        dollars, _, cents = val.partition('.')
-        return make(
-            'Amount',
-            0 if dollars == '' else int(dollars),
-            0 if cents == '' else int(cents)
-        )
-    if kind == 'AccountDeclaration' and isinstance(val, str):
-        error_msg = 'Account Declaration was not like: Asset Accounts Receivable'
-        splits = u.split_and_strip(val)
-        if len(splits) < 2: raise InputError(error_msg)
-        try:
-            return make('AccountDeclaration', splits[0], ' '.join(splits[1:]))
-        except AssertionError:
-            raise InputError(error_msg)
-    if kind == 'str' and isinstance(val, Amount): return f'{val.dollars}.{str(val.cents).zfill(2)}'
-    raise NotImplementedError(f'{kind}: {val}')
-
+# Return y views as the type of x
+def cast(x, y):
+    try:
+        return sac_types.cast(x, y)
+    except NotImplementedError:
+        raise
 
 def fill_date(x: str, y: Union[None, datetime.date]) -> datetime.date:
     assert isinstance(x, str)
@@ -56,17 +38,21 @@ def fill_date(x: str, y: Union[None, datetime.date]) -> datetime.date:
         return y
     raise InputError(f'{x} is not a date in the form YYYYMMDD')
 
-# Return x combined with y
-# For Q's definition, see https://code.kx.com/q/ref/join/
 def join(x, y):
-    if isinstance(x, State) and isinstance(y, str): return join_state_str(x, y)
-    raise NotImplementedError(f'join({type(x)}, {type(y)})')
-
+    print('join', type(x), y)
+    breakpoint()
+    try:
+        return sac_types.join(x, y)
+    except NotImplementedError:
+        if isinstance(x, State) and isinstance(y, str): return join_state_str(x, y)
+        raise NotImplementedError(f'join({type(x)}, {type(y)})')
+    
 def join_state_str(state: State, y: str) -> State:
-    stripped = y.strip()
-    if len(stripped) == 0: return state
-    if stripped.startswith('#'): return state
-    front, _, _ = stripped.partition('#')
+    breakpoint()
+    print('join_state_str', str)
+    if len(y) == 0: return state
+    if y.startswith('#'): return state
+    front, _, _ = y.partition('#')
     for row in csv.reader([front]):  # parse as a line in a CSV file
         if len(row) == 1: return join_state_account_declaration(state, row[0])
         if len(row) == 5: return join_state_journal_entry(state, row)
@@ -75,6 +61,7 @@ def join_state_str(state: State, y: str) -> State:
     return state  # silence a type-checking error
 
 def join_state_account_declaration(state: State, line: str) -> State:
+    breakpoint()
     assert isinstance(state, State)
     assert isinstance(line, str)
     ad = cast('AccountDeclaration', line)
@@ -90,16 +77,17 @@ def join_state_account_declaration(state: State, line: str) -> State:
     raise InputError(f'attempt to redefine category for account {name} from {existing_category} to {category}')
 
 def join_state_journal_entry(state: State, items: List[str]) -> State:
+    print('join_state_journal_entry', state, items)
     assert isinstance(state, State)
     assert len(items) == 5
     date, amount, debit_account, credit_account, description = list(map(str.strip, items))  # parse str values
     if debit_account not in state.category_for_account: raise InputError(f'account {debit_account} not previously declared')
     if credit_account not in state.category_for_account: raise InputError(f'acccount {credit_account} not previously declared')
     previous_date = None if state.previous_journal_entry is None else state.previous_journal_entry.date
-    je = make('JournalEntry', fill_date(date, previous_date), cast('Amount', amount), debit_account, credit_account, description)
+    je = sac_types.make('JournalEntry', fill_date(date, previous_date), cast('Amount', amount), debit_account, credit_account, description)
     assert isinstance(je, JournalEntry)
     new_ledgers = copy.deepcopy(state.ledger_entries_for_account)
-    def ledger_entry(side, account): return make('LedgerEntry', account, je.date, make('Balance', side, je.amount), je.description, state.source, state.location)
+    def ledger_entry(side, account): return sac_types.make('LedgerEntry', account, je.date, sac_types.make('Balance', side, je.amount), je.description, state.source, state.location)
     new_ledgers[je.debit_account].append(ledger_entry('debit', debit_account))
     new_ledgers[je.credit_account].append(ledger_entry('credit', credit_account))
     return state._replace(ledger_entries_for_account=new_ledgers, previous_journal_entry=je)
@@ -154,13 +142,15 @@ def main():
             # path = os.path.join(directory, filename)
             with open(filename, 'r') as f:
                 for i, line in enumerate(f):
-                    state = state._replace(line=line, location=f'{i+1}')
-                    state = process_line(state, line)
-    else:  # read from standard inx
+                    stripped = line.strip()
+                    state = state._replace(line=stripped, location=f'{i+1}')
+                    state = process_line(state, stripped)
+    else:  # read from standard in
         state = state._replace(source='(stdin)')
         for i, line in enumerate(fileinput.input()):
-            state = state._replace(line=line, location=f'{i+1}')
-            state = process_line(state, line)
+            stripped = line.strip()
+            state = state._replace(line=stripped, location=f'{i+1}')
+            state = process_line(state, stripped)
     assert isinstance(state, State)
     produce_output(state)
 
