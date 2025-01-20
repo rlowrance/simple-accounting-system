@@ -1,0 +1,63 @@
+# This regression test input file is based on
+#  https://openstax.org/books/principles-financial-accounting
+
+# These journal entries are described in Chapter 3 of the text
+#  https://openstax.org/books/principles-financial-accounting/pages/3-5-use-journal-entries-to-record-transactions-and-post-to-t-accounts
+# The example in the text is modified here to incorporate revenue and expense account categories.
+
+# The name of the fictional company is Printing Plus
+
+## Account definitions
+Asset Cash
+Asset Accounts Receivable  # from customers for services
+Asset Accumulated Depreciation Equipment
+Asset Interest Receivable 
+
+Liability Accounts Payable
+Liability Salaries Payable
+Liability Unearned Revenue
+
+Equity Common Stock
+Equity Dividends
+
+Revenue Interest Revenue
+Revenue Services Revenue
+
+Expense Depreciation Equipment
+Expense Equipment
+Expense Salaries
+Expense Supplies
+Expense Utilities
+
+Expense Utilities # duplicate entry--no error
+
+# Journal entries
+20190102, 20000, Cash, Common Stock, issuance of common stock
+05,        3500, Equipment, Accounts Payable, purchase of equipment on account
+09,        4000, Cash, Unearned Revenue, receipt of customer advanced payment for services yet to be rendered
+10,        5500, Accounts Receivable, Services Revenue, revenue earned; billed customer
+12,         300, Utilities, Cash, paid utility paid with Cash
+14,         100, Dividends, Cash, paid dividends in Cash
+17,        2800, Cash, Services Revenue, collected cash for services rendered
+18,        3500, Accounts Payable, Cash, paid liability for equipment in full
+20,        3600, Salaries, Cash, paid employee Salaries
+23,        5500, Cash, Accounts Receivable, received customer payment from Jan 10
+27,        1200, Accounts Receivable, Services Revenue, billed customer for services rendered
+30,         500, Supplies, Accounts Payable, purchased supplied on account
+
+# Adjusting entries for January
+# These are slight variation on the source, just below.
+# see https://openstax.org/books/principles-financial-accounting/pages/4-3-record-and-post-the-common-types-of-adjusting-entries
+20190131,  100, Supplies,               Supplies,                           recognize supply usage for January
+,           75, Depreciation Equipment, Accumulated Depreciation Equipment, equipment depreciation for January
+,          600, Unearned Revenue,       Services Revenue,                    revenue earned for the January 9 transaction
+,          140, Interest Receivable,    Interest Revenue,                   interest earned by not yet collected for January
+,         1500, Salaries,               Salaries Payable,                   salaries expense not yet paid for January
+
+
+
+
+
+
+
+
