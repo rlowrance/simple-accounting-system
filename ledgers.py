@@ -9,72 +9,14 @@ import fileinput
 import os
 import sys
 
-
+from sac_types import AccountDeclaration, Amount, JournalEntry, LedgerEntry, make
 import utility as u
 
-AccountDeclaration = collections.namedtuple('AccountDeclaration', 'category name')
-Amount = collections.namedtuple('Amount', 'dollars cents')
-Balance = collections.namedtuple('Balance', 'side amount')
-JournalEntry = collections.namedtuple('JournalEntry', 'date amount debit_account credit_account description')
-LedgerEntry = collections.namedtuple('LedgerEntry', 'account date balance description source location')
 State = collections.namedtuple('State', 'category_for_account ledgers previous_journal_entry line source location')
 
 class InputError(Exception):
     def __init__(self, msg): self.msg = msg
     def __str__(self): return f'{self.msg}'
-
-# Return type-checked value x
-def checked(x, kind):
-    assert isinstance(x, kind)
-    return x
-
-# Make a new instance with type-checked and normalized attributes
-def make(kind, *args):
-    if kind == 'AccountDeclaration':
-        category, name = args
-        assert category in {'Asset', 'Liability', 'Equity', 'Revenue', 'Expense'}
-        return AccountDeclaration(category, checked(name, str))
-    if kind == 'Amount':
-        dollars, cents = args
-        assert isinstance(dollars, int)
-        assert isinstance(cents, int)
-        if cents >= 0 and cents < 100: return Amount(dollars, cents)
-        if cents > 100: return make('Amount', dollars+1, cents-100)
-        if cents < 0: return make('Amount', dollars-1, cents+100)
-    if kind == 'Balance':
-        side, amount = args
-        assert side in {'debit', 'credit'}
-        return Balance(side, checked(amount, Amount))
-    if kind == 'JournalEntry':
-        date, amount, debit_account, credit_account, description = args
-        return JournalEntry(
-            checked(date, datetime.date),
-            checked(amount, Amount),
-            checked(debit_account, str),
-            checked(credit_account, str),
-            checked(description, str),
-        )
-    if kind == 'LedgerEntry':
-        account, date, balance, description, source, location = args
-        return LedgerEntry(
-            checked(account, str),
-            checked(date, datetime.date),
-            checked(balance, Balance),
-            checked(description, str),
-            checked(source, str),
-            checked(location, str),
-        )
-    if kind == 'State': # return an empty state
-        assert len(args) == 0
-        return State(
-            category_for_account={}, 
-            ledgers=collections.defaultdict(list), 
-            previous_journal_entry=None, 
-            line='',
-            source=None, 
-            location=None,
-    )
-    raise NotImplementedError(f'make({kind}, {args})')
 
 # Return val cast according to kind
 # For Q's definition, see https://code.kx.com/q/ref/cast/
@@ -203,7 +145,7 @@ def process_line(state: State, line: str) -> State:
         raise
 
 def main():
-    state = make('State')
+    state = State({}, collections.defaultdict(list), None, None, None, None)
     assert isinstance(state, State)
     if len(sys.argv) > 1:  # process files on the command line
         # directory = '.'
@@ -224,9 +166,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
