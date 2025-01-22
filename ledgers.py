@@ -9,18 +9,15 @@ import fileinput
 import os
 import sys
 
-from sac_types import AccountDeclaration, Amount, JournalEntry, InputError, LedgerEntry
-import sac_types
+from sac import AccountDeclaration, Amount, JournalEntry, InputError, LedgerEntry
+import sac
 import utility as u
 
 State = collections.namedtuple('State', 'category_for_account ledger_entries_for_account previous_journal_entry line source location')
 
 # Return y views as the type of x
 def cast(x, y):
-    try:
-        return sac_types.cast(x, y)
-    except NotImplementedError:
-        raise
+    return sac.cast(x, y)
 
 def fill_date(x: str, y: Union[None, datetime.date]) -> datetime.date:
     assert isinstance(x, str)
@@ -39,58 +36,98 @@ def fill_date(x: str, y: Union[None, datetime.date]) -> datetime.date:
     raise InputError(f'{x} is not a date in the form YYYYMMDD')
 
 def join(x, y):
-    print('join', type(x), y)
-    breakpoint()
-    try:
-        return sac_types.join(x, y)
-    except NotImplementedError:
-        if isinstance(x, State) and isinstance(y, str): return join_state_str(x, y)
-        raise NotImplementedError(f'join({type(x)}, {type(y)})')
+    print('join', type(x), y, type(y))
+    if isinstance(x, State) and isinstance(y, AccountDeclaration):
+        return join_state_account_declaration(x, y)
+    if isinstance(x, State) and isinstance(y, JournalEntry):
+        return join_state_journal_entry(x, y)
+    if isinstance(x, State) and isinstance(y, str):
+        return join_state_str(x, y)
+    if isinstance(x, State) and isinstance(y, str): return join_state_str(x, y)
+    return sac.join(x, y)
     
 def join_state_str(state: State, y: str) -> State:
-    breakpoint()
+    #breakpoint()
     print('join_state_str', str)
     if len(y) == 0: return state
     if y.startswith('#'): return state
     front, _, _ = y.partition('#')
-    for row in csv.reader([front]):  # parse as a line in a CSV file
-        if len(row) == 1: return join_state_account_declaration(state, row[0])
-        if len(row) == 5: return join_state_journal_entry(state, row)
-        if len(row) == 2: return join_state_journal_entry_abbreviated(state, row)
-        raise InputError('line is not an Account Declaration or a Journal Entry')
+    for row1 in csv.reader([front]):  # parse as a line in a CSV file
+        row = list(map(str.strip, row1))  # remove any leading or trailing white space
+        if len(row) == 1: return join_state_account_declaration_str(state, row[0])
+        if len(row) > 5: raise InputError('line has more than five CSV columns')
+        if len(row) <= 5: return join_state_journal_entry_str(state, row)
     return state  # silence a type-checking error
 
-def join_state_account_declaration(state: State, line: str) -> State:
-    breakpoint()
+def join_state_account_declaration(state: State, ad: AccountDeclaration) -> State:
+    assert isinstance(state, State)
+    assert isinstance(ad, AccountDeclaration)
+    category, account = ad
+    existing_category = state.category_for_account.get(account, None)
+    if existing_category is None:
+        new_state = copy.deepcopy(state)
+        new_state.category_for_account[account] = category
+        return new_state
+    if category == state.category_for_account[account]: 
+        return state
+    raise InputError(f'attempt to redefine category for account {account} from {existing_category} to {category}')
+
+def join_state_account_declaration_str(state: State, line: str) -> State:
+    print('join_state_account_declaration', line)
     assert isinstance(state, State)
     assert isinstance(line, str)
     ad = cast('AccountDeclaration', line)
     assert isinstance(ad, AccountDeclaration)
-    category, name = ad
-    existing_category = state.category_for_account.get(name, None)
-    if existing_category is None:
-        new_state = copy.deepcopy(state)
-        new_state.category_for_account[name] = category
-        return new_state
-    if category == state.category_for_account[name]: 
-        return state
-    raise InputError(f'attempt to redefine category for account {name} from {existing_category} to {category}')
+    return join_state_account_declaration(state, ad)
 
-def join_state_journal_entry(state: State, items: List[str]) -> State:
-    print('join_state_journal_entry', state, items)
+def join_state_journal_entry(state: State, je: JournalEntry) -> State:
     assert isinstance(state, State)
-    assert len(items) == 5
-    date, amount, debit_account, credit_account, description = list(map(str.strip, items))  # parse str values
-    if debit_account not in state.category_for_account: raise InputError(f'account {debit_account} not previously declared')
-    if credit_account not in state.category_for_account: raise InputError(f'acccount {credit_account} not previously declared')
-    previous_date = None if state.previous_journal_entry is None else state.previous_journal_entry.date
-    je = sac_types.make('JournalEntry', fill_date(date, previous_date), cast('Amount', amount), debit_account, credit_account, description)
     assert isinstance(je, JournalEntry)
+    def ledger_entry(side: str, account: str) -> LedgerEntry:
+        return sac.make('LedgerEntry', account, je.date, sac.make('Balance', side, je.amount), je.description, state.source, state.location)
     new_ledgers = copy.deepcopy(state.ledger_entries_for_account)
-    def ledger_entry(side, account): return sac_types.make('LedgerEntry', account, je.date, sac_types.make('Balance', side, je.amount), je.description, state.source, state.location)
-    new_ledgers[je.debit_account].append(ledger_entry('debit', debit_account))
-    new_ledgers[je.credit_account].append(ledger_entry('credit', credit_account))
-    return state._replace(ledger_entries_for_account=new_ledgers, previous_journal_entry=je)
+    new_ledgers[je.debit_account].append(ledger_entry('debit', je.debit_account))
+    new_ledgers[je.credit_account].append(ledger_entry('credit', je.credit_account))
+    return state._replace(
+        ledger_entries_for_account=new_ledgers,
+        previous_journal_entry=je)
+
+def join_state_journal_entry_str(state: State, items: List[str]) -> State:
+    print('join_state_journal_entry', items)
+    assert len(items) > 1
+    if len(items) == 5:
+        date, amount, debit_account, credit_account, description = items
+        pje = state.previous_journal_entry
+        if len(date) != 8 and pje is None: raise InputError('missing complete date in form YYYYMMDD')
+        if len(date) != 8:
+            previous_date = cast('str', pje.date)
+            if len(date) == 0: date = previous_date
+            elif len(date) == 1: date = previous_date[0:6] + date.zfill(2)
+            elif len(date) == 2: date = previous_date[0:6] + date
+            elif len(date) == 4: date = previous_date[0:4] + date
+            else: raise InputError('abbreviated date not of length 1, 2, or 4')
+        if len(amount) == 0 and pje is None: raise InputError('missing amount')
+        if len(amount) == 0: amount = cast('str', pje.amount)
+        if len(debit_account) == 0 and pje is None: raise InputError('missing debit account')
+        if len(debit_account) == 0: debit_account = pje.debit_account
+        if len(credit_account) == 0 and pje is None: raise InputError('missing credit account')
+        if len(credit_account) == 0: credit_account = pje.credit_account
+        if len(description) == 0 and pje is not None and len(pje.description) > 0: description = pje.description
+
+        if debit_account not in state.category_for_account: raise InputError(f'account {debit_account} not previously declared')
+        if credit_account not in state.category_for_account: raise InputError(f'account {credit_account} not previously declared')
+        new_je = sac.make(
+            'JournalEntry', 
+            cast('datetime.date', date),
+            cast('Amount',  amount), 
+            debit_account, 
+            credit_account, 
+            description)
+        assert isinstance(new_je, JournalEntry)
+        return join(state, new_je)
+
+    else:
+        return join_state_journal_entry_str(state, join(items, ''))
 
 def join_state_journal_entry_abbreviated(state: State, items: List[str]) -> State:
     assert isinstance(state, State)
@@ -99,7 +136,7 @@ def join_state_journal_entry_abbreviated(state: State, items: List[str]) -> Stat
     new_items.append(state.previous_journal_entry.debit_account)
     new_items.append(state.previous_journal_entry.credit_account)
     new_items.append(state.previous_journal_entry.description)
-    return join_state_journal_entry(state, new_items)
+    return join_state_journal_entry_str(state, new_items)
 
 # write ledgers to stdout formated as a CSV file
 def produce_output(state: State) -> None:
@@ -122,13 +159,12 @@ def produce_output(state: State) -> None:
                     ledger_entry.location,
                 ))
 
-# Update state with line, possibly raising any InputError
+# join line to state, raising any InputError
 def process_line(state: State, line: str) -> State:
     try:
-        state = join(state, line)
-        return state
+        return join(state, line)
     except InputError as e:
-        e.add_note(f'in line: {line.strip()}')
+        e.add_note(f'in line: {line}')
         e.add_note(f'in file {state.source} line number {state.location}')
         raise
 
