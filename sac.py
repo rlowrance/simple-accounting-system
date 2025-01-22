@@ -2,6 +2,8 @@ import collections
 import copy
 import datetime
 
+from typing import List
+
 import utility as u
 
 AccountDeclaration = collections.namedtuple('AccountDeclaration', 'category name')
@@ -79,12 +81,34 @@ def cast(kind, val):
             return make('AccountDeclaration', splits[0], ' '.join(splits[1:]))
         except AssertionError:
             raise InputError(error_msg)
-    if kind == 'str' and isinstance(val, Amount): return f'{val.dollars}.{str(val.cents).zfill(2)}'
-    raise NotImplementedError(f'{kind}: {val}')
+    if kind == 'JournalEntry' and isinstance(val, str):
+        error_msg = 'Journal Entry was not like: date, amount, debit_account, credit_account, description'
+        splits = u.split_and_strip(val)
+        if len(splits) != 5: raise InputError(error_msg)
+        try:
+            return make('JournalEntry', cast('datetime.date', splits[0]), cast('Amount', splits[1]), splits[2], splits[3], splits[4])
+        except AssertionError:
+            raise InputError(error_msg)
+    if kind == 'datetime.date' and isinstance(val, str):
+        return datetime.date.fromisoformat(val)
+    if kind == 'str' and isinstance(val, Amount): 
+        return f'{val.dollars}.{str(val.cents).zfill(2)}'
+    if kind == 'str' and isinstance(val, datetime.date):
+        return f'{val.year}{str(val.month).zfill(2)}{str(val.day).zfill(2)}'
+    raise NotImplementedError(f'cast({kind}: {val})')
 
 # Return x combined with y
 # For Q's definition, see https://code.kx.com/q/ref/join/
 def join(x, y):
+    print(f'join({x}: {type(x)}, {y}: {type(y)})')
+    if isinstance(x, list) and isinstance(y, list):
+        r= copy.deepcopy(x)
+        r.extend(y)
+    if isinstance(x, list):
+        r = copy.deepcopy(x)
+        r.append(y)
+        return r
+    if isinstance(x, tuple): return join(list(x), y)
     raise NotImplementedError(f'join({type(x)}, {type(y)})')
 
 
