@@ -1,9 +1,11 @@
 # Chart of accounts
-Asset citibank 9851      # checking
+Asset citibank 9581      # checking roy
+Asset citibank 9604      # checking Judith and Margaret
+Asset citibank 9594      # savings
 Asset venmo              # roy.lowrance@gmail.com
 
-Liability citibank 9462  # credit card
-Liability llbearn 9195   # credit card
+Liability citibank 9462  # credit card Citi Double Cash Card
+Liability llbean 9195    # credit card serviced by Citibank
 
 Equity net-worth
 
@@ -13,7 +15,7 @@ Revenue art
 Expense ads continuing-education
 Expense ads memberships
 
+Expense art memberships
 Expense art shows
 
 Expense h                          # household
-Expense misc-expense

@@ -1,12 +1,9 @@
 # LL Bean Mastercard ... 9195
 # Serviced by Citibank
 
-Asset: citibank_9581
-Liability: llbean_9195
-Expense: h  # household
+# From statement 2024 December
 
-20241206,190.06,h,llbean_9195,luggage
-
-20250202,190.06,llbean_9195,citibank_9581, autopay
+20241206,190.06,h,llbean 9195,luggage
+20250202,190.06,llbean 9195,citibank 9581, autopay
 
 
