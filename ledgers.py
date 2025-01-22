@@ -36,7 +36,6 @@ def fill_date(x: str, y: Union[None, datetime.date]) -> datetime.date:
     raise InputError(f'{x} is not a date in the form YYYYMMDD')
 
 def join(x, y):
-    print('join', type(x), y, type(y))
     if isinstance(x, State) and isinstance(y, AccountDeclaration):
         return join_state_account_declaration(x, y)
     if isinstance(x, State) and isinstance(y, JournalEntry):
@@ -48,7 +47,6 @@ def join(x, y):
     
 def join_state_str(state: State, y: str) -> State:
     #breakpoint()
-    print('join_state_str', str)
     if len(y) == 0: return state
     if y.startswith('#'): return state
     front, _, _ = y.partition('#')
@@ -73,7 +71,6 @@ def join_state_account_declaration(state: State, ad: AccountDeclaration) -> Stat
     raise InputError(f'attempt to redefine category for account {account} from {existing_category} to {category}')
 
 def join_state_account_declaration_str(state: State, line: str) -> State:
-    print('join_state_account_declaration', line)
     assert isinstance(state, State)
     assert isinstance(line, str)
     ad = cast('AccountDeclaration', line)
@@ -93,7 +90,6 @@ def join_state_journal_entry(state: State, je: JournalEntry) -> State:
         previous_journal_entry=je)
 
 def join_state_journal_entry_str(state: State, items: List[str]) -> State:
-    print('join_state_journal_entry', items)
     assert len(items) > 1
     if len(items) == 5:
         date, amount, debit_account, credit_account, description = items
