@@ -86,7 +86,7 @@ def make_journal_entry(splits: List[str]) -> JournalEntry:
 def parse(line: Line, last_journal_entry: Union[JournalEntry, None]) -> Union[AccountDeclaration, JournalEntry]:
     def complete(je: JournalEntry) -> JournalEntry:
         return dataclasses.replace(je, source=line.source, source_location=line.source_location)
-    splits = u.csv_line_to_str(line.text)  # allow quoting and other CSV file layout conventions
+    splits = u._cast_liststr_csvline(line.text)  # allow quoting and other CSV file layout conventions
     if len(splits) == 1: 
         return parse_account_declaration(line.text)
     else:
