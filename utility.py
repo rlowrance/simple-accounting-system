@@ -1,20 +1,35 @@
 # utility functions
+import copy
 import csv
 import io
 import sys
+import typing
 import unittest
 
 from typing import Any, Dict, List, Set
 
+# convert value to an instance of kind
+def cast(kind, value):
+    if kind == 'csvline' and isinstance(value, typing.abc.Sequence):  # return a str formatted as a line in a csv file
+        # ref: https://stackoverflow.com/questions/3305926/python-csv-string-to-array
+        with io.StringIO() as file:
+            csv.writer(file).writerow(value)
+            r: str = file.getvalue().strip()
+            return r
+    if kind == 'list[str]' and isinstance(value, str):  # return a list of str
+        # ref: https://stackoverflow.com/questions/3305926/python-csv-string-to-array
+        return list(map(str.strip, next(csv.reader([value]))))
 
 # ref: https://stackoverflow.com/questions/3305926/python-csv-string-to-array
-def csv_line_from_row(row: List[str]) -> str:
+# Deprecated; instead cast('csvline', row)
+def _cast_csvline_listrow(row: List[str]) -> str:
     with io.StringIO() as line:
         csv.writer(line).writerow(row)
         return line.getvalue().strip()
 
 # ref: https://stackoverflow.com/questions/3305926/python-csv-string-to-array
-def csv_line_to_str(line: str) -> List[str]:
+# Deprecated: instead cast('liststr', line)
+def _cast_liststr_csvline(line: str) -> List[str]:
     return list(map(str.strip, next(csv.reader([line]))))
 
 # Write to stderr
@@ -45,6 +60,19 @@ def safe_cast(value, to_type, default_value=None):
     except (ValueError, TypeError):
         return default_value
 
+# Return a new value that merges y into x
+def join(x, y):
+    if isinstance(x, dict) and isinstance(y, tuple) and len(y) == 2:
+        r = copy.deepcopy(x)
+        key, value = y
+        r[key] = value
+        return r
+    
+def _set_on_deepcopy(d: dict, key, value) -> dict:
+    r = copy.deepcopy(d)
+    r[key] = value
+    return r
+
 # ref: https://stackoverflow.com/questions/4071396/how-to-split-by-comma-and-strip-white-spaces-in-python
 def split_and_strip(s, splitter=None) -> List:
     if splitter is None:
@@ -68,7 +96,7 @@ class Test(unittest.TestCase):
         )
         for test in tests:
             x, expected = test
-            self.assertEqual(expected, csv_line_to_str(x))
+            self.assertEqual(expected, _cast_liststr_csvline(x))
 
 if __name__ == '__main__':
     unittest.main()
