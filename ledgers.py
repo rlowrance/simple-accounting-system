@@ -15,8 +15,13 @@ import utility as u
 
 State = collections.namedtuple('State', 'category_for_account ledger_entries_for_account previous_journal_entry line source location')
 
+verbose = False
+def vp(*args, **kwargs):
+    if verbose: print(*args, **kwargs)
+
 # Return y views as the type of x
 def cast(x, y):
+    vp('cast', x, y)
     return sac.cast(x, y)
 
 def fill_date(x: str, y: Union[None, datetime.date]) -> datetime.date:
@@ -36,28 +41,29 @@ def fill_date(x: str, y: Union[None, datetime.date]) -> datetime.date:
     raise InputError(f'{x} is not a date in the form YYYYMMDD')
 
 def join(x, y):
+    vp('join', x, y)
     if isinstance(x, State) and isinstance(y, AccountDeclaration):
-        return join_state_account_declaration(x, y)
+        return join_State_AccountDeclaration(x, y)
     if isinstance(x, State) and isinstance(y, JournalEntry):
-        return join_state_journal_entry(x, y)
+        return join_State_JournalEntry(x, y)
     if isinstance(x, State) and isinstance(y, str):
-        return join_state_str(x, y)
-    if isinstance(x, State) and isinstance(y, str): return join_state_str(x, y)
+        return join_State_str(x, y)
+    if isinstance(x, State) and isinstance(y, str): return join_State_str(x, y)
     return sac.join(x, y)
     
-def join_state_str(state: State, y: str) -> State:
+def join_State_str(state: State, y: str) -> State:
     #breakpoint()
     if len(y) == 0: return state
     if y.startswith('#'): return state
     front, _, _ = y.partition('#')
     for row1 in csv.reader([front]):  # parse as a line in a CSV file
         row = list(map(str.strip, row1))  # remove any leading or trailing white space
-        if len(row) == 1: return join_state_account_declaration_str(state, row[0])
+        if len(row) == 1: return join_State_AccountDeclarationstr(state, row[0])
         if len(row) > 5: raise InputError('line has more than five CSV columns')
-        if len(row) <= 5: return join_state_journal_entry_str(state, row)
+        if len(row) <= 5: return join_State_JournalEntrystr(state, row)
     return state  # silence a type-checking error
 
-def join_state_account_declaration(state: State, ad: AccountDeclaration) -> State:
+def join_State_AccountDeclaration(state: State, ad: AccountDeclaration) -> State:
     assert isinstance(state, State)
     assert isinstance(ad, AccountDeclaration)
     category, account = ad
@@ -70,18 +76,20 @@ def join_state_account_declaration(state: State, ad: AccountDeclaration) -> Stat
         return state
     raise InputError(f'attempt to redefine category for account {account} from {existing_category} to {category}')
 
-def join_state_account_declaration_str(state: State, line: str) -> State:
+def join_State_AccountDeclarationstr(state: State, line: str) -> State:
     assert isinstance(state, State)
     assert isinstance(line, str)
     ad = cast('AccountDeclaration', line)
     assert isinstance(ad, AccountDeclaration)
-    return join_state_account_declaration(state, ad)
+    return join_State_AccountDeclaration(state, ad)
 
-def join_state_journal_entry(state: State, je: JournalEntry) -> State:
+def join_State_JournalEntry(state: State, je: JournalEntry) -> State:
     assert isinstance(state, State)
     assert isinstance(je, JournalEntry)
     def ledger_entry(side: str, account: str) -> LedgerEntry:
-        return sac.make('LedgerEntry', account, je.date, sac.make('Balance', side, je.amount), je.description, state.source, state.location)
+        category = state.category_for_account[account]
+        balance = sac.make('Balance', side, je.amount)
+        return sac.make('LedgerEntry', category, account, je.date, balance, je.description, state.source, state.location)
     new_ledgers = copy.deepcopy(state.ledger_entries_for_account)
     new_ledgers[je.debit_account].append(ledger_entry('debit', je.debit_account))
     new_ledgers[je.credit_account].append(ledger_entry('credit', je.credit_account))
@@ -89,7 +97,7 @@ def join_state_journal_entry(state: State, je: JournalEntry) -> State:
         ledger_entries_for_account=new_ledgers,
         previous_journal_entry=je)
 
-def join_state_journal_entry_str(state: State, items: List[str]) -> State:
+def join_State_JournalEntrystr(state: State, items: List[str]) -> State:
     assert len(items) > 1
     if len(items) == 5:
         date, amount, debit_account, credit_account, description = items
@@ -123,21 +131,14 @@ def join_state_journal_entry_str(state: State, items: List[str]) -> State:
         return join(state, new_je)
 
     else:
-        return join_state_journal_entry_str(state, join(items, ''))
-
-def join_state_journal_entry_abbreviated(state: State, items: List[str]) -> State:
-    assert isinstance(state, State)
-    assert len(items) == 2
-    new_items = copy.deepcopy(items)
-    new_items.append(state.previous_journal_entry.debit_account)
-    new_items.append(state.previous_journal_entry.credit_account)
-    new_items.append(state.previous_journal_entry.description)
-    return join_state_journal_entry_str(state, new_items)
+        return join_State_JournalEntrystr(state, join(items, ''))
 
 # write ledgers to stdout formated as a CSV file
 def produce_output(state: State) -> None:
+    vp(f'produce_output: n_accounts: {len(state.category_for_account)}, n_ledgers: {len(state.ledger_entries_for_account)}')
+    #breakpoint()
     writer = csv.writer(sys.stdout, quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(('category', 'account', 'date', 'side', 'amount', 'description', 'line'))
+    writer.writerow(('category', 'account', 'date', 'side', 'amount', 'description', 'line', 'location'))
     accounts_for_category = u.invert_dict(state.category_for_account)
     for category in ('Asset', 'Liability', 'Equity', 'Revenue', 'Expense'):
         accounts = accounts_for_category[category]
@@ -145,9 +146,9 @@ def produce_output(state: State) -> None:
             for ledger_entry in sorted(state.ledger_entries_for_account[account], key=lambda ledger_entry: ledger_entry.date):
                 assert isinstance(ledger_entry, LedgerEntry)
                 writer.writerow((
-                    state.category_for_account[ledger_entry.account],
-                    ledger_entry.account,
-                    f'{str(ledger_entry.date.year)}{str(ledger_entry.date.month).zfill(2)}{str(ledger_entry.date.day).zfill(2)}',
+                    category,
+                    account,
+                    cast('str', ledger_entry.date),
                     ledger_entry.balance.side,
                     cast('str', ledger_entry.balance.amount),
                     ledger_entry.description,
@@ -157,6 +158,7 @@ def produce_output(state: State) -> None:
 
 # join line to state, raising any InputError
 def process_line(state: State, line: str) -> State:
+    vp('process_line', line)
     try:
         return join(state, line)
     except InputError as e:
@@ -165,6 +167,7 @@ def process_line(state: State, line: str) -> State:
         raise
 
 def main():
+    #breakpoint()
     state = State({}, collections.defaultdict(list), None, None, None, None)
     assert isinstance(state, State)
     if len(sys.argv) > 1:  # process files on the command line
